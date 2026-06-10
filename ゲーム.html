@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>テトリス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c14;
+    --surface: #12121e;
+    --surface2: #1a1a2c;
+    --border: #2a2a40;
+    --accent: #e8c840;
+    --accent2: #40c8e8;
+    --text: #e0dff5;
+    --text-muted: #7070a0;
+    --grid-line: #ffffff06;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  /* scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 101;
+  }
+
+  h1 {
+    font-family: 'DotGothic16', monospace;
+    font-size: 28px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(232,200,64,0.5), 0 0 40px rgba(232,200,64,0.2);
+    margin-bottom: 16px;
+    animation: flicker 4s infinite;
+  }
+
+  @keyframes flicker {
+    0%,95%,100% { opacity: 1; }
+    96% { opacity: 0.85; }
+    97% { opacity: 1; }
+    98% { opacity: 0.9; }
+  }
+
+  #wrapper {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  /* ---- BOARD ---- */
+  #board-wrap {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 0 30px rgba(64,200,232,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+  }
+
+  canvas#board {
+    display: block;
+    background: #080810;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8,8,16,0.82);
+    gap: 12px;
+    display: none;
+  }
+
+  #overlay.show { display: flex; }
+
+  .overlay-title {
+    font-family: 'DotGothic16', monospace;
+    font-size: 26px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(232,200,64,0.6);
+  }
+
+  .overlay-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ---- SIDE ---- */
+  #side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 120px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+
+  .card-label {
+    font-family: 'DotGothic16', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+  }
+
+  .card-value {
+    font-family: 'DotGothic16', monospace;
+    font-size: 24px;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(232,200,64,0.4);
+    line-height: 1;
+  }
+
+  .next-label {
+    font-family: 'DotGothic16', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+  }
+
+  canvas#next-canvas {
+    display: block;
+    border-radius: 2px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 10px 0;
+    font-family: 'DotGothic16', monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--bg);
+    background: var(--accent);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 0 12px rgba(232,200,64,0.3);
+  }
+
+  .btn:hover {
+    background: #f0d050;
+    box-shadow: 0 0 20px rgba(232,200,64,0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn:active { transform: translateY(0); }
+
+  .btn.paused {
+    background: var(--accent2);
+    color: var(--bg);
+    box-shadow: 0 0 12px rgba(64,200,232,0.3);
+  }
+
+  .hint-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 2;
+    letter-spacing: 0.05em;
+  }
+
+  .hint-card .key {
+    font-family: 'DotGothic16', monospace;
+    color: var(--accent2);
+    font-size: 12px;
+  }
+
+  #msg {
+    font-family: 'DotGothic16', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    height: 16px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  /* line-clear flash */
+  @keyframes rowFlash {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+  }
+
+  #score-val.bump {
+    animation: scoreBump 0.3s ease-out;
+  }
+  @keyframes scoreBump {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); color: #fff; }
+    100% { transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<h1>テトリス</h1>
+<p id="msg">スタートボタンを押してください</p>
+
+<div id="wrapper">
+  <div id="board-wrap">
+    <canvas id="board" width="240" height="480"></canvas>
+    <div id="overlay" class="show">
+      <div class="overlay-title">テトリス</div>
+      <div class="overlay-sub">スタートボタンを押してください</div>
+    </div>
+  </div>
+
+  <div id="side">
+    <div class="card">
+      <div class="card-label">スコア</div>
+      <div class="card-value" id="score-val">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">レベル</div>
+      <div class="card-value" id="level-val">1</div>
+    </div>
+    <div class="card">
+      <div class="card-label">ライン</div>
+      <div class="card-value" id="lines-val">0</div>
+    </div>
+    <div class="card">
+      <div class="next-label">ネクスト</div>
+      <canvas id="next-canvas" width="96" height="72" style="background:#080810;border:1px solid var(--border);"></canvas>
+    </div>
+    <button class="btn" id="start-btn">スタート</button>
+    <button class="btn paused" id="pause-btn" style="display:none">ポーズ</button>
+    <div class="hint-card">
+      <span class="key">← →</span> 移動<br>
+      <span class="key">↑</span> 回転<br>
+      <span class="key">↓</span> 加速<br>
+      <span class="key">スペース</span> 落下<br>
+      <span class="key">P</span> ポーズ
+    </div>
+  </div>
+</div>
+
+<script>
+const COLS = 10, ROWS = 20, BS = 24;
+const boardEl = document.getElementById('board');
+const ctx = boardEl.getContext('2d');
+const nextEl = document.getElementById('next-canvas');
+const nCtx = nextEl.getContext('2d');
+const overlay = document.getElementById('overlay');
+const msgEl = document.getElementById('msg');
+const scoreEl = document.getElementById('score-val');
+const levelEl = document.getElementById('level-val');
+const linesEl = document.getElementById('lines-val');
+const startBtn = document.getElementById('start-btn');
+const pauseBtn = document.getElementById('pause-btn');
+
+const PIECES = [
+  { shape: [[1,1,1,1]], color: '#40c8e8' },           // I
+  { shape: [[1,1],[1,1]], color: '#e8c840' },           // O
+  { shape: [[0,1,1],[1,1,0]], color: '#40e880' },       // S
+  { shape: [[1,1,0],[0,1,1]], color: '#e84060' },       // Z
+  { shape: [[1,1,1],[0,1,0]], color: '#c040e8' },       // T
+  { shape: [[1,1,1],[1,0,0]], color: '#e88040' },       // L
+  { shape: [[1,1,1],[0,0,1]], color: '#4080e8' },       // J
+];
+
+let grid, cur, next, score, level, lines, timer, running, paused;
+
+function newGrid() { return Array.from({length:ROWS},()=>Array(COLS).fill(null)); }
+
+function spawn(def) {
+  const s = def.shape.map(r=>[...r]);
+  return { shape: s, color: def.color, x: Math.floor((COLS-s[0].length)/2), y: 0 };
+}
+
+function randDef() { return PIECES[Math.floor(Math.random()*PIECES.length)]; }
+
+function rotate(shape) {
+  return shape[0].map((_,c)=>shape.map(r=>r[c]).reverse());
+}
+
+function valid(p, g) {
+  return p.shape.every((row,dy)=>row.every((v,dx)=>{
+    if(!v) return true;
+    const nx=p.x+dx, ny=p.y+dy;
+    return nx>=0 && nx<COLS && ny<ROWS && (ny<0||!g[ny][nx]);
+  }));
+}
+
+function place() {
+  cur.shape.forEach((row,dy)=>row.forEach((v,dx)=>{
+    if(v) grid[cur.y+dy][cur.x+dx]=cur.color;
+  }));
+}
+
+function clearLines() {
+  let n=0;
+  for(let r=ROWS-1;r>=0;r--) {
+    if(grid[r].every(c=>c)) { grid.splice(r,1); grid.unshift(Array(COLS).fill(null)); n++; r++; }
+  }
+  return n;
+}
+
+function ghostY() {
+  let gy=cur.y;
+  while(valid({...cur,y:gy+1},grid)) gy++;
+  return gy;
+}
+
+function lighten(hex) {
+  let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  r=Math.min(255,r+70); g=Math.min(255,g+70); b=Math.min(255,b+70);
+  return `rgb(${r},${g},${b})`;
+}
+function darken(hex) {
+  let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  r=Math.round(r*0.45); g=Math.round(g*0.45); b=Math.round(b*0.45);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawBlock(c, color, x, y, size, ghost) {
+  if(ghost) {
+    c.globalAlpha = 0.18;
+    c.fillStyle = color;
+    c.fillRect(x+1, y+1, size-2, size-2);
+    c.globalAlpha = 1;
+    return;
+  }
+  c.fillStyle = lighten(color);
+  c.fillRect(x, y, size, size);
+  c.fillStyle = darken(color);
+  c.fillRect(x+1, y+1, size-2, size-2);
+  c.fillStyle = color;
+  c.fillRect(x+2, y+2, size-4, size-4);
+  c.fillStyle = `rgba(255,255,255,0.35)`;
+  c.fillRect(x+3, y+3, size-7, 2);
+  c.fillRect(x+3, y+3, 2, size-7);
+  // glow
+  c.shadowColor = color;
+  c.shadowBlur = 6;
+  c.fillStyle = 'transparent';
+  c.fillRect(x, y, size, size);
+  c.shadowBlur = 0;
+}
+
+function draw() {
+  // background
+  ctx.fillStyle = '#080810';
+  ctx.fillRect(0, 0, COLS*BS, ROWS*BS);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*BS,0);ctx.lineTo(c*BS,ROWS*BS);ctx.stroke();}
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*BS);ctx.lineTo(COLS*BS,r*BS);ctx.stroke();}
+
+  // placed
+  grid.forEach((row,r)=>row.forEach((color,c)=>{
+    if(color) drawBlock(ctx, color, c*BS, r*BS, BS);
+  }));
+
+  // ghost
+  if(cur) {
+    const gy = ghostY();
+    if(gy !== cur.y) {
+      cur.shape.forEach((row,dy)=>row.forEach((v,dx)=>{
+        if(v) drawBlock(ctx, cur.color, (cur.x+dx)*BS, (gy+dy)*BS, BS, true);
+      }));
+    }
+    // active piece
+    cur.shape.forEach((row,dy)=>row.forEach((v,dx)=>{
+      if(v) drawBlock(ctx, cur.color, (cur.x+dx)*BS, (cur.y+dy)*BS, BS);
+    }));
+  }
+
+  // next piece
+  nCtx.fillStyle = '#080810';
+  nCtx.fillRect(0,0,96,72);
+  if(next) {
+    const pw=next.shape[0].length, ph=next.shape.length, ns=16;
+    const ox=Math.floor((96-pw*ns)/2), oy=Math.floor((72-ph*ns)/2);
+    next.shape.forEach((row,dy)=>row.forEach((v,dx)=>{
+      if(v) drawBlock(nCtx, next.color, ox+dx*ns, oy+dy*ns, ns);
+    }));
+  }
+}
+
+function step() {
+  if(!running||paused) return;
+  cur.y++;
+  if(!valid(cur,grid)) {
+    cur.y--;
+    place();
+    const n = clearLines();
+    if(n) {
+      lines += n;
+      const pts=[0,100,300,500,800];
+      score += (pts[n]||1000)*level;
+      level = Math.floor(lines/10)+1;
+      scoreEl.textContent = score;
+      levelEl.textContent = level;
+      linesEl.textContent = lines;
+      scoreEl.classList.remove('bump');
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add('bump');
+    }
+    cur = spawn(next.def||next);
+    cur.def = next.def||next;
+    const nd = randDef();
+    next = spawn(nd);
+    next.def = nd;
+    if(!valid(cur,grid)) { gameOver(); return; }
+  }
+  draw();
+  clearTimeout(timer);
+  timer = setTimeout(step, Math.max(80, 550-(level-1)*45));
+}
+
+function gameOver() {
+  running = false;
+  clearTimeout(timer);
+  overlay.innerHTML = `<div class="overlay-title">ゲームオーバー</div><div class="overlay-sub">スコア：${score}</div><div class="overlay-sub" style="color:#7070a0;font-size:12px;margin-top:4px">スタートボタンを押してください</div>`;
+  overlay.classList.add('show');
+  startBtn.textContent = 'もう一度';
+  pauseBtn.style.display = 'none';
+  msgEl.textContent = 'ゲームオーバー';
+}
+
+function startGame() {
+  grid = newGrid();
+  const d1=randDef(), d2=randDef();
+  cur = spawn(d1); cur.def=d1;
+  next = spawn(d2); next.def=d2;
+  score=0; level=1; lines=0; paused=false; running=true;
+  scoreEl.textContent='0'; levelEl.textContent='1'; linesEl.textContent='0';
+  msgEl.textContent='';
+  overlay.classList.remove('show');
+  startBtn.textContent='リスタート';
+  pauseBtn.style.display='block';
+  pauseBtn.textContent='ポーズ';
+  pauseBtn.style.background='var(--accent2)';
+  clearTimeout(timer);
+  step();
+}
+
+function togglePause() {
+  if(!running) return;
+  paused=!paused;
+  if(paused) {
+    overlay.innerHTML=`<div class="overlay-title">ポーズ中</div><div class="overlay-sub">P を押して再開</div>`;
+    overlay.classList.add('show');
+    pauseBtn.textContent='再開';
+    pauseBtn.style.background='var(--accent)';
+    msgEl.textContent='ポーズ中';
+  } else {
+    overlay.classList.remove('show');
+    pauseBtn.textContent='ポーズ';
+    pauseBtn.style.background='var(--accent2)';
+    msgEl.textContent='';
+    step();
+  }
+}
+
+startBtn.addEventListener('click', startGame);
+pauseBtn.addEventListener('click', togglePause);
+
+document.addEventListener('keydown', e => {
+  if(e.key==='p'||e.key==='P') { togglePause(); return; }
+  if(!running||paused) return;
+  if(e.key==='ArrowLeft'){ cur.x--; if(!valid(cur,grid)) cur.x++; draw(); e.preventDefault(); }
+  else if(e.key==='ArrowRight'){ cur.x++; if(!valid(cur,grid)) cur.x--; draw(); e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ clearTimeout(timer); step(); e.preventDefault(); }
+  else if(e.key==='ArrowUp'){
+    const rot=rotate(cur.shape), old=cur.shape; cur.shape=rot;
+    if(!valid(cur,grid)){ cur.x--; if(!valid(cur,grid)){ cur.x+=2; if(!valid(cur,grid)){ cur.x--; cur.shape=old; }}}
+    draw(); e.preventDefault();
+  } else if(e.key===' '){
+    cur.y=ghostY(); clearTimeout(timer); step(); e.preventDefault();
+  }
+});
+
+// touch
+let tx, ty;
+boardEl.addEventListener('touchstart', e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;e.preventDefault();},{passive:false});
+boardEl.addEventListener('touchend', e=>{
+  if(!running||paused) return;
+  const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>Math.abs(dy)){
+    if(dx>12){cur.x++;if(!valid(cur,grid))cur.x--;}
+    else if(dx<-12){cur.x--;if(!valid(cur,grid))cur.x++;}
+  } else {
+    if(dy>15){clearTimeout(timer);step();}
+    else if(dy<-15){
+      const rot=rotate(cur.shape),old=cur.shape;cur.shape=rot;
+      if(!valid(cur,grid)){cur.x--;if(!valid(cur,grid)){cur.x+=2;if(!valid(cur,grid)){cur.x--;cur.shape=old;}}}
+    }
+  }
+  draw();
+},{passive:false});
+
+draw();
+</script>
+</body>
+</html>
