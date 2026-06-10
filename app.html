@@ -1,0 +1,603 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旅ランキング ✈️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg1: #1a6bb5;
+  --bg2: #0e4d8f;
+  --bg3: #0a3970;
+  --sky: #5baee8;
+  --light: #a8d8f8;
+  --white: #ffffff;
+  --card: rgba(255,255,255,0.13);
+  --card-hover: rgba(255,255,255,0.22);
+  --border: rgba(255,255,255,0.22);
+  --text: #ffffff;
+  --text2: rgba(255,255,255,0.7);
+  --text3: rgba(255,255,255,0.45);
+  --gold: #ffd84d;
+  --silver: #d0e8ff;
+  --bronze: #ffc08a;
+  --accent: #7de8ff;
+  --pink: #ffb3d1;
+  --green: #84f0c0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: linear-gradient(160deg, #1e7fd4 0%, #1059a8 35%, #0b3f80 65%, #092e62 100%);
+  min-height: 100vh;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── 背景装飾 ── */
+.bg-deco {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.bg-circle {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+  animation: pulse 6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 0.6; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+.bg-wave {
+  position: absolute; bottom: -10px; left: 0; right: 0; height: 200px;
+  background: linear-gradient(to top, rgba(255,255,255,0.04), transparent);
+  clip-path: ellipse(60% 60% at 50% 100%);
+}
+.float-dot {
+  position: absolute; border-radius: 50%; opacity: 0;
+  animation: floatUp linear infinite;
+}
+@keyframes floatUp {
+  0%   { opacity: 0; transform: translateY(0) scale(1); }
+  10%  { opacity: 0.5; }
+  90%  { opacity: 0.2; }
+  100% { opacity: 0; transform: translateY(-100vh) scale(0.5); }
+}
+
+/* ── レイアウト ── */
+#app {
+  position: relative; z-index: 10;
+  max-width: 640px; margin: 0 auto;
+  padding: 0 16px 80px;
+}
+
+/* ── ヘッダー ── */
+.header {
+  text-align: center; padding: 40px 0 28px;
+  animation: fadeDown 0.7s ease both;
+}
+@keyframes fadeDown {
+  from { opacity:0; transform: translateY(-20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.header-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.14); border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 16px; font-size: 12px;
+  color: var(--accent); letter-spacing: 0.1em; margin-bottom: 14px;
+  backdrop-filter: blur(8px);
+}
+.header h1 {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 32px; font-weight: 900;
+  background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none; margin-bottom: 8px; letter-spacing: 0.03em;
+}
+.header p { font-size: 13px; color: var(--text2); }
+
+/* ── タブ ── */
+.tabs {
+  display: flex; gap: 8px; margin-bottom: 20px;
+  animation: fadeUp 0.5s 0.2s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(16px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.tab {
+  flex: 1; padding: 10px 0;
+  border-radius: 14px; border: 1.5px solid var(--border);
+  background: var(--card); color: var(--text2);
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 13px; cursor: pointer; transition: all 0.22s;
+  backdrop-filter: blur(8px); text-align: center;
+}
+.tab.active {
+  background: rgba(255,255,255,0.22); color: #fff;
+  border-color: rgba(255,255,255,0.45);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.tab:hover:not(.active) { background: rgba(255,255,255,0.17); color: #fff; }
+
+/* ── ランキングリスト ── */
+#ranking-view { animation: fadeUp 0.5s 0.3s ease both; }
+
+.rank-item {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 20px; padding: 16px 18px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 0.22s;
+  animation: slideIn 0.4s ease both;
+  position: relative; overflow: hidden;
+}
+.rank-item::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+  border-radius: inherit;
+}
+.rank-item:hover {
+  background: var(--card-hover); transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+  border-color: rgba(255,255,255,0.4);
+}
+@keyframes slideIn {
+  from { opacity:0; transform: translateX(-20px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+.rank-num {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 28px; font-weight: 900;
+  min-width: 44px; text-align: center; line-height: 1;
+  flex-shrink: 0;
+}
+.rank-1 .rank-num { color: var(--gold); text-shadow: 0 0 16px rgba(255,216,77,0.7); }
+.rank-2 .rank-num { color: var(--silver); text-shadow: 0 0 12px rgba(208,232,255,0.5); }
+.rank-3 .rank-num { color: var(--bronze); text-shadow: 0 0 12px rgba(255,192,138,0.5); }
+.rank-item:not(.rank-1):not(.rank-2):not(.rank-3) .rank-num { color: var(--text2); font-size: 22px; }
+
+.rank-emoji {
+  font-size: 36px; flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+}
+
+.rank-info { flex: 1; min-width: 0; }
+.rank-name {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: #fff; margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rank-loc {
+  font-size: 12px; color: var(--text2);
+  display: flex; align-items: center; gap: 4px; margin-bottom: 5px;
+}
+.rank-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.rank-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.14); color: var(--text2);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.rank-score {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0;
+}
+.score-stars { font-size: 13px; letter-spacing: -2px; margin-bottom: 2px; }
+.score-val {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 20px; font-weight: 900; color: var(--gold);
+}
+
+/* No.1 special glow */
+.rank-1 {
+  background: linear-gradient(135deg, rgba(255,216,77,0.15), rgba(255,255,255,0.1));
+  border-color: rgba(255,216,77,0.4);
+  box-shadow: 0 6px 24px rgba(255,216,77,0.15);
+}
+
+/* ── 追加フォーム ── */
+#add-view { animation: fadeUp 0.5s 0.3s ease both; display: none; }
+
+.form-card {
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 24px; padding: 28px 24px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+}
+.form-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 18px; font-weight: 700; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 12px; color: var(--text2);
+  margin-bottom: 6px; letter-spacing: 0.06em;
+}
+.field input, .field textarea, .field select {
+  width: 100%; padding: 12px 14px;
+  border-radius: 14px; border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.1); color: #fff;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 14px;
+  outline: none; transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--accent); background: rgba(255,255,255,0.16);
+  box-shadow: 0 0 0 3px rgba(125,232,255,0.18);
+}
+.field select option { background: #0e4d8f; color: #fff; }
+.field textarea { resize: none; height: 80px; }
+
+.star-select { display: flex; gap: 8px; margin-top: 4px; }
+.star-btn {
+  font-size: 24px; cursor: pointer; transition: transform 0.15s;
+  opacity: 0.35; user-select: none;
+}
+.star-btn.on { opacity: 1; transform: scale(1.15); }
+.star-btn:hover { transform: scale(1.2); opacity: 0.8; }
+
+.emoji-select { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.emoji-opt {
+  font-size: 26px; cursor: pointer; padding: 6px;
+  border-radius: 10px; border: 2px solid transparent;
+  transition: all 0.15s; background: rgba(255,255,255,0.08);
+}
+.emoji-opt.selected {
+  border-color: var(--accent); background: rgba(125,232,255,0.18);
+  transform: scale(1.1);
+}
+
+.btn-add {
+  width: 100%; padding: 14px;
+  border-radius: 16px; border: none;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: #0a3970;
+  background: linear-gradient(135deg, #7de8ff, #5baee8);
+  cursor: pointer; box-shadow: 0 6px 20px rgba(125,232,255,0.35);
+  transition: all 0.2s; margin-top: 6px;
+}
+.btn-add:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(125,232,255,0.5); }
+.btn-add:active { transform: translateY(0); }
+
+/* ── 詳細モーダル ── */
+#modal-bg {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(8,32,70,0.7); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+#modal-bg.open { display: flex; }
+#modal {
+  background: linear-gradient(160deg, #1a6bb5, #0b3f80);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 28px; padding: 32px 28px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  animation: modalIn 0.35s cubic-bezier(.34,1.56,.64,1) both;
+  position: relative;
+}
+@keyframes modalIn {
+  from { opacity:0; transform: scale(0.88) translateY(20px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+.modal-close {
+  position: absolute; top: 16px; right: 18px;
+  font-size: 22px; cursor: pointer; color: var(--text2);
+  transition: color 0.15s; line-height: 1;
+}
+.modal-close:hover { color: #fff; }
+.modal-emoji { font-size: 56px; text-align: center; margin-bottom: 10px; }
+.modal-rank-badge {
+  text-align: center; margin-bottom: 6px;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 13px; color: var(--text2); letter-spacing: 0.1em;
+}
+.modal-name {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 24px; font-weight: 900; text-align: center;
+  margin-bottom: 4px;
+}
+.modal-loc { text-align: center; color: var(--text2); font-size: 13px; margin-bottom: 12px; }
+.modal-stars { text-align: center; font-size: 20px; letter-spacing: -1px; margin-bottom: 16px; }
+.modal-comment {
+  background: rgba(255,255,255,0.1); border-radius: 14px;
+  padding: 14px 16px; font-size: 14px; line-height: 1.7;
+  color: var(--text2); margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.modal-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.modal-tag {
+  font-size: 12px; padding: 4px 12px; border-radius: 12px;
+  background: rgba(125,232,255,0.15); color: var(--accent);
+  border: 1px solid rgba(125,232,255,0.25);
+}
+.btn-del {
+  width: 100%; margin-top: 16px; padding: 10px;
+  border-radius: 12px; border: 1px solid rgba(255,100,100,0.3);
+  background: rgba(255,100,100,0.1); color: rgba(255,150,150,0.9);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-del:hover { background: rgba(255,100,100,0.2); }
+
+/* ── 空状態 ── */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--text2);
+}
+.empty-state .big { font-size: 56px; margin-bottom: 14px; }
+.empty-state p { font-size: 14px; line-height: 1.7; }
+
+/* ── トースト ── */
+#toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: linear-gradient(135deg, #7de8ff, #5baee8);
+  color: #0a3970; font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 14px; font-weight: 700;
+  padding: 12px 28px; border-radius: 30px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 500; transition: transform 0.4s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+  opacity: 0; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* カウント */
+.rank-count {
+  text-align: right; font-size: 12px; color: var(--text3);
+  margin-bottom: 10px; letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+
+<div class="bg-deco" id="bgDeco">
+  <div class="bg-circle" style="width:400px;height:400px;top:-100px;right:-100px;animation-delay:0s"></div>
+  <div class="bg-circle" style="width:300px;height:300px;bottom:100px;left:-80px;animation-delay:2s"></div>
+  <div class="bg-wave"></div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-badge">✈️ TRAVEL RANKING</div>
+    <h1>旅ランキング</h1>
+    <p>行ってよかった場所をランキングで紹介しよう！</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('ranking')">🏆 ランキング</div>
+    <div class="tab" onclick="switchTab('add')">＋ 追加する</div>
+  </div>
+
+  <!-- ランキングビュー -->
+  <div id="ranking-view">
+    <div class="rank-count" id="rank-count"></div>
+    <div id="rank-list"></div>
+  </div>
+
+  <!-- 追加ビュー -->
+  <div id="add-view">
+    <div class="form-card">
+      <div class="form-title">🗺️ 新しい場所を追加</div>
+
+      <div class="field">
+        <label>📍 場所の名前</label>
+        <input type="text" id="f-name" placeholder="例：京都・嵐山" maxlength="30">
+      </div>
+      <div class="field">
+        <label>🌍 国・地域</label>
+        <input type="text" id="f-loc" placeholder="例：日本・京都府" maxlength="30">
+      </div>
+      <div class="field">
+        <label>🎯 アイコンを選ぶ</label>
+        <div class="emoji-select" id="emoji-select">
+          <span class="emoji-opt selected" data-e="🏔️">🏔️</span>
+          <span class="emoji-opt" data-e="🏖️">🏖️</span>
+          <span class="emoji-opt" data-e="🏯">🏯</span>
+          <span class="emoji-opt" data-e="🗼">🗼</span>
+          <span class="emoji-opt" data-e="🌸">🌸</span>
+          <span class="emoji-opt" data-e="🍜">🍜</span>
+          <span class="emoji-opt" data-e="🎡">🎡</span>
+          <span class="emoji-opt" data-e="🛕">🛕</span>
+          <span class="emoji-opt" data-e="🌊">🌊</span>
+          <span class="emoji-opt" data-e="🌿">🌿</span>
+          <span class="emoji-opt" data-e="🎑">🎑</span>
+          <span class="emoji-opt" data-e="🏙️">🏙️</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>⭐ おすすめ度</label>
+        <div class="star-select" id="star-select">
+          <span class="star-btn on" data-v="1">⭐</span>
+          <span class="star-btn on" data-v="2">⭐</span>
+          <span class="star-btn on" data-v="3">⭐</span>
+          <span class="star-btn" data-v="4">⭐</span>
+          <span class="star-btn" data-v="5">⭐</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>🏷️ タグ（カンマ区切り）</label>
+        <input type="text" id="f-tags" placeholder="例：自然, 絶景, 穴場" maxlength="60">
+      </div>
+      <div class="field">
+        <label>💬 一言コメント</label>
+        <textarea id="f-comment" placeholder="どんなところが良かった？おすすめポイントを教えて！"></textarea>
+      </div>
+
+      <button class="btn-add" onclick="addPlace()">✨ ランキングに追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細モーダル -->
+<div id="modal-bg" onclick="closeModal(event)">
+  <div id="modal">
+    <div class="modal-close" onclick="closeModalDirect()">✕</div>
+    <div class="modal-emoji" id="m-emoji"></div>
+    <div class="modal-rank-badge" id="m-rank"></div>
+    <div class="modal-name" id="m-name"></div>
+    <div class="modal-loc" id="m-loc"></div>
+    <div class="modal-stars" id="m-stars"></div>
+    <div class="modal-comment" id="m-comment"></div>
+    <div class="modal-tags" id="m-tags"></div>
+    <button class="btn-del" id="btn-del" onclick="deletePlace()">🗑️ 削除する</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── 浮遊ドット ── */
+const bgDeco = document.getElementById('bgDeco');
+for(let i=0;i<14;i++){
+  const d = document.createElement('div');
+  d.className = 'float-dot';
+  const s = 4+Math.random()*10;
+  d.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;bottom:-20px;background:rgba(255,255,255,${0.1+Math.random()*0.2});animation-delay:${Math.random()*12}s;animation-duration:${10+Math.random()*12}s;`;
+  bgDeco.appendChild(d);
+}
+
+/* ── データ ── */
+const STORAGE_KEY = 'travel_ranking_v2';
+function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]; }catch(e){ return []; } }
+function save(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){} }
+
+let places = load();
+if(places.length === 0){
+  places = [
+    { id:1, name:'京都・嵐山', loc:'日本・京都府', emoji:'🌸', stars:5, tags:['紅葉','竹林','風情'], comment:'竹林の小径は圧巻！早朝に行くと人が少なくて最高でした。' },
+    { id:2, name:'屋久島', loc:'日本・鹿児島県', emoji:'🌿', tags:['自然','世界遺産','トレッキング'], stars:5, comment:'縄文杉への道のりは大変だけど、到着した時の感動は一生モノ！' },
+    { id:3, name:'バリ島・ウブド', loc:'インドネシア', emoji:'🛕', tags:['リゾート','文化','癒し'], stars:4, comment:'棚田の絶景とロカワルンの料理が最高。また行きたい場所No.1。' },
+    { id:4, name:'金沢・ひがし茶屋街', loc:'日本・石川県', emoji:'🏯', tags:['伝統','グルメ','散策'], stars:4, comment:'加賀料理と温泉が最高！主計町茶屋街も雰囲気抜群でした。' },
+    { id:5, name:'沖縄・慶良間諸島', loc:'日本・沖縄県', emoji:'🌊', tags:['海','シュノーケル','透明度'], stars:5, comment:'海の透明度が世界レベル！ウミガメにも会えて感動しました。' },
+  ];
+  save(places);
+}
+
+/* ── ランキング表示 ── */
+function renderRanking(){
+  const sorted = [...places].sort((a,b)=>(b.stars-a.stars)||(b.id-a.id));
+  const list = document.getElementById('rank-list');
+  const count = document.getElementById('rank-count');
+  count.textContent = `全 ${sorted.length} スポット`;
+  if(sorted.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="big">🗺️</div><p>まだ場所が登録されていません。<br>「追加する」からお気に入りの旅先を<br>登録してみましょう！</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  sorted.forEach((p, i)=>{
+    const rank = i+1;
+    const cls = rank<=3 ? `rank-${rank}` : '';
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+    const stars = '⭐'.repeat(p.stars) + '☆'.repeat(5-p.stars);
+    const tagsHtml = (p.tags||[]).map(t=>`<span class="rank-tag">${t}</span>`).join('');
+    const el = document.createElement('div');
+    el.className = `rank-item ${cls}`;
+    el.style.animationDelay = `${i*0.06}s`;
+    el.innerHTML = `
+      <div class="rank-num">${medal||rank}</div>
+      <div class="rank-emoji">${p.emoji||'📍'}</div>
+      <div class="rank-info">
+        <div class="rank-name">${p.name}</div>
+        <div class="rank-loc">📍 ${p.loc||'—'}</div>
+        <div class="rank-tags">${tagsHtml}</div>
+      </div>
+      <div class="rank-score">
+        <div class="score-stars">${'⭐'.repeat(p.stars)}</div>
+        <div class="score-val">${p.stars}.0</div>
+      </div>`;
+    el.onclick = ()=>openModal(p, rank);
+    list.appendChild(el);
+  });
+}
+
+/* ── タブ切替 ── */
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===(t==='ranking'?0:1)));
+  document.getElementById('ranking-view').style.display = t==='ranking'?'block':'none';
+  document.getElementById('add-view').style.display = t==='add'?'block':'none';
+  if(t==='ranking') renderRanking();
+}
+
+/* ── 星選択 ── */
+let selStars = 3;
+document.getElementById('star-select').addEventListener('click', e=>{
+  const btn = e.target.closest('.star-btn');
+  if(!btn) return;
+  selStars = +btn.dataset.v;
+  document.querySelectorAll('.star-btn').forEach(b=>b.classList.toggle('on', +b.dataset.v<=selStars));
+});
+
+/* ── 絵文字選択 ── */
+let selEmoji = '🏔️';
+document.getElementById('emoji-select').addEventListener('click', e=>{
+  const opt = e.target.closest('.emoji-opt');
+  if(!opt) return;
+  selEmoji = opt.dataset.e;
+  document.querySelectorAll('.emoji-opt').forEach(o=>o.classList.toggle('selected', o===opt));
+});
+
+/* ── 追加 ── */
+function addPlace(){
+  const name = document.getElementById('f-name').value.trim();
+  const loc  = document.getElementById('f-loc').value.trim();
+  const tagsRaw = document.getElementById('f-tags').value.trim();
+  const comment = document.getElementById('f-comment').value.trim();
+  if(!name){ showToast('⚠️ 場所の名前を入力してください'); return; }
+  const tags = tagsRaw ? tagsRaw.split(/[,，、]/).map(t=>t.trim()).filter(Boolean) : [];
+  places.push({ id: Date.now(), name, loc, emoji: selEmoji, stars: selStars, tags, comment });
+  save(places);
+  ['f-name','f-loc','f-tags','f-comment'].forEach(id=>document.getElementById(id).value='');
+  selStars=3; selEmoji='🏔️';
+  document.querySelectorAll('.star-btn').forEach(b=>b.classList.toggle('on',+b.dataset.v<=3));
+  document.querySelectorAll('.emoji-opt').forEach(o=>o.classList.toggle('selected', o.dataset.e==='🏔️'));
+  showToast('✨ 追加しました！');
+  switchTab('ranking');
+}
+
+/* ── モーダル ── */
+let modalId = null;
+function openModal(p, rank){
+  modalId = p.id;
+  const medal = rank===1?'🥇 第1位':rank===2?'🥈 第2位':rank===3?'🥉 第3位':`第${rank}位`;
+  document.getElementById('m-emoji').textContent = p.emoji||'📍';
+  document.getElementById('m-rank').textContent = medal;
+  document.getElementById('m-name').textContent = p.name;
+  document.getElementById('m-loc').textContent = '📍 '+(p.loc||'—');
+  document.getElementById('m-stars').textContent = '⭐'.repeat(p.stars)+'☆'.repeat(5-p.stars);
+  document.getElementById('m-comment').textContent = p.comment||'コメントなし';
+  document.getElementById('m-tags').innerHTML = (p.tags||[]).map(t=>`<span class="modal-tag">${t}</span>`).join('');
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(e){ if(e.target===document.getElementById('modal-bg')) closeModalDirect(); }
+function closeModalDirect(){ document.getElementById('modal-bg').classList.remove('open'); }
+function deletePlace(){
+  if(!confirm('本当に削除しますか？')) return;
+  places = places.filter(p=>p.id!==modalId);
+  save(places); closeModalDirect(); renderRanking();
+  showToast('🗑️ 削除しました');
+}
+
+/* ── トースト ── */
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ── 初期化 ── */
+renderRanking();
+</script>
+</body>
+</html>
